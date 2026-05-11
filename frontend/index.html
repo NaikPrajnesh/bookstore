@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PageTurn — Online Bookstore</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts: Playfair Display for headings, Lato for body -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ==================== NAVIGATION BAR ==================== -->
+  <nav class="navbar">
+    <div class="nav-brand" onclick="showPage('home')"> Book Store</div>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('home')">Home</a>
+      <a href="#" onclick="showPage('cart')">
+        Cart <span class="cart-badge" id="cartBadge">0</span>
+      </a>
+      <a href="#" onclick="showPage('login')" class="btn-nav-login">Login</a>
+    </div>
+    <!-- Hamburger for mobile -->
+    <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#" onclick="showPage('home'); toggleMobileMenu()">Home</a>
+    <a href="#" onclick="showPage('cart'); toggleMobileMenu()">Cart</a>
+    <a href="#" onclick="showPage('login'); toggleMobileMenu()">Login</a>
+  </div>
+
+  <!-- ==================== HOME PAGE ==================== -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <h1>Find Your Next<br/><span>Great Read</span></h1>
+      <p>Thousands of books, one simple place.</p>
+      <!-- Search Bar -->
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search by title, author..." oninput="searchBooks()"/>
+        <button onclick="searchBooks()">Search</button>
+      </div>
+    </div>
+
+    <!-- Category Filter (Optional Feature) -->
+    <div class="categories">
+      <button class="cat-btn active" onclick="filterCategory('all', this)">All</button>
+      <button class="cat-btn" onclick="filterCategory('Fiction', this)">Fiction</button>
+      <button class="cat-btn" onclick="filterCategory('Science', this)">Science</button>
+      <button class="cat-btn" onclick="filterCategory('History', this)">History</button>
+      <button class="cat-btn" onclick="filterCategory('Technology', this)">Technology</button>
+      <button class="cat-btn" onclick="filterCategory('Self-Help', this)">Self-Help</button>
+    </div>
+
+    <!-- Books Grid -->
+    <div class="container">
+      <div class="section-title">
+        <h2>Our Collection</h2>
+        <p id="bookCount"></p>
+      </div>
+      <div class="books-grid" id="booksGrid">
+        <!-- Book cards injected by JS -->
+        <div class="loading">Loading books...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BOOK DETAILS PAGE ==================== -->
+  <div id="page-details" class="page">
+    <div class="container">
+      <button class="btn-back" onclick="showPage('home')">← Back to Home</button>
+      <div class="book-detail-card" id="bookDetailContent">
+        <!-- Filled by JS -->
+      </div>
+      <!-- Optional: Reviews Section -->
+      <div class="reviews-section" id="reviewsSection">
+        <h3>Reader Reviews</h3>
+        <div class="reviews-list" id="reviewsList"></div>
+        <div class="add-review">
+          <h4>Leave a Review</h4>
+          <div class="star-rating" id="starRating">
+            <span onclick="setRating(1)">★</span>
+            <span onclick="setRating(2)">★</span>
+            <span onclick="setRating(3)">★</span>
+            <span onclick="setRating(4)">★</span>
+            <span onclick="setRating(5)">★</span>
+          </div>
+          <textarea id="reviewText" placeholder="Write your review here..."></textarea>
+          <button class="btn-primary" onclick="submitReview()">Submit Review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CART PAGE ==================== -->
+  <div id="page-cart" class="page">
+    <div class="container">
+      <h2 class="page-heading">Your Cart</h2>
+      <div id="cartContent">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CHECKOUT PAGE ==================== -->
+  <div id="page-checkout" class="page">
+    <div class="container">
+      <div class="checkout-success">
+        <div class="success-icon">✓</div>
+        <h2>Order Placed Successfully!</h2>
+        <p>Thank you for your purchase. Your books are on their way! 📦</p>
+        <p class="order-id">Order ID: <strong id="orderId"></strong></p>
+        <button class="btn-primary" onclick="showPage('home')">Continue Shopping</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LOGIN PAGE ==================== -->
+  <div id="page-login" class="page">
+    <div class="container">
+      <div class="auth-card">
+        <!-- Toggle between Login and Signup -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</button>
+          <button class="auth-tab" id="signupTab" onclick="switchAuthTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <h2>Welcome Back</h2>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="you@example.com" required/>
+            <span class="form-error" id="loginEmailErr"></span>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter password" required/>
+            <span class="form-error" id="loginPassErr"></span>
+          </div>
+          <button type="submit" class="btn-primary btn-full">Login</button>
+          <p class="auth-switch">Don't have an account? <a href="#" onclick="switchAuthTab('signup')">Sign Up</a></p>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signupForm" style="display:none" onsubmit="handleSignup(event)">
+          <h2>Create Account</h2>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="signupName" placeholder="John Doe" required/>
+            <span class="form-error" id="signupNameErr"></span>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="signupEmail" placeholder="you@example.com" required/>
+            <span class="form-error" id="signupEmailErr"></span>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="signupPassword" placeholder="Min. 6 characters" required/>
+            <span class="form-error" id="signupPassErr"></span>
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="signupConfirm" placeholder="Repeat password" required/>
+            <span class="form-error" id="signupConfirmErr"></span>
+          </div>
+          <button type="submit" class="btn-primary btn-full">Create Account</button>
+          <p class="auth-switch">Already have an account? <a href="#" onclick="switchAuthTab('login')">Login</a></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Dark/Light Mode Toggle (Optional Feature) -->
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+
+  <script src="script.js"></script>
+</body>
+</html>
