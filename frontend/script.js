@@ -1,14 +1,6 @@
 /**
- * PageTurn Bookstore — script.js
- * Handles all frontend logic:
- *  - Page routing
- *  - API calls to Spring MVC backend
- *  - Book display, search, filter
- *  - Cart management
- *  - Checkout
- *  - Auth form validation
- *  - Dark/light mode
- *  - Reviews
+ * Chapter & Verse Bookstore — script.js
+ * Handles all frontend logic with smooth animations
  */
 
 // ==================== CONFIGURATION ====================
@@ -142,8 +134,12 @@ function showPage(pageName) {
 function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
+  toast.classList.remove('hide');
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2500);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+  }, 2800);
 }
 
 /**
@@ -154,7 +150,7 @@ function renderStars(rating) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5 ? 1 : 0;
   const empty = 5 - full - half;
-  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+  return '\u2605'.repeat(full) + (half ? '\u00BD' : '') + '\u2606'.repeat(empty);
 }
 
 // ==================== DARK/LIGHT MODE ====================
@@ -162,16 +158,14 @@ function renderStars(rating) {
 function toggleTheme() {
   document.body.classList.toggle('dark');
   const btn = document.getElementById('themeToggle');
-  btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
-  // Save preference
+  btn.innerHTML = document.body.classList.contains('dark') ? '\u2600\uFE0F' : '\uD83C\uDF19';
   localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
 }
 
-// Apply saved theme on page load
 (function applyTheme() {
   if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark');
-    document.getElementById('themeToggle').textContent = '☀️';
+    document.getElementById('themeToggle').innerHTML = '\u2600\uFE0F';
   }
 })();
 
@@ -181,6 +175,78 @@ function toggleMobileMenu() {
   document.getElementById('mobileMenu').classList.toggle('open');
 }
 
+// ==================== RIPPLE EFFECT ====================
+
+function createRipple(e) {
+  const btn = e.currentTarget;
+  const circle = document.createElement('span');
+  const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+  const radius = diameter / 2;
+
+  const rect = btn.getBoundingClientRect();
+  circle.style.width = circle.style.height = `${diameter}px`;
+  circle.style.left = `${e.clientX - rect.left - radius}px`;
+  circle.style.top = `${e.clientY - rect.top - radius}px`;
+  circle.classList.add('ripple');
+
+  const existing = btn.getElementsByClassName('ripple')[0];
+  if (existing) existing.remove();
+
+  btn.appendChild(circle);
+}
+
+function initRippleButtons() {
+  document.querySelectorAll('.ripple-btn').forEach(btn => {
+    btn.addEventListener('click', createRipple);
+  });
+}
+
+// ==================== SCROLL OBSERVER ====================
+
+function setupScrollObserver() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+  });
+}
+
+// ==================== NAVBAR SCROLL ====================
+
+function initNavbarScroll() {
+  const navbar = document.getElementById('navbar');
+  let lastScroll = 0;
+
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    if (currentScroll > 20) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
+    }
+    lastScroll = currentScroll;
+  });
+}
+
+// ==================== SKELETON LOADING ====================
+
+function showSkeleton(count = 6) {
+  const grid = document.getElementById('booksGrid');
+  grid.innerHTML = Array.from({ length: count }, () => `
+    <div class="skeleton-card animate-on-scroll">
+      <div class="skeleton-img skeleton"></div>
+      <div class="skeleton-text skeleton" style="width:70%"></div>
+      <div class="skeleton-text skeleton short"></div>
+    </div>
+  `).join('');
+}
+
 // ==================== BOOKS — FETCH & DISPLAY ====================
 
 /**
@@ -188,16 +254,20 @@ function toggleMobileMenu() {
  * Falls back to MOCK_BOOKS if the backend is not running.
  */
 async function loadBooks() {
+  showSkeleton(6);
+
   try {
     const response = await fetch(`${API_BASE}/books`);
     if (!response.ok) throw new Error('Network error');
     allBooks = await response.json();
   } catch (err) {
-    // Use mock data when backend is not available
     console.warn('Backend not available, using mock data.');
+    await new Promise(r => setTimeout(r, 600));
     allBooks = MOCK_BOOKS;
   }
+
   renderBooks(allBooks);
+  setupScrollObserver();
 }
 
 /**
@@ -209,15 +279,20 @@ function renderBooks(books) {
   document.getElementById('bookCount').textContent = `${books.length} book${books.length !== 1 ? 's' : ''}`;
 
   if (books.length === 0) {
-    grid.innerHTML = '<div class="no-results">No books found.</div>';
+    grid.innerHTML = `
+      <div class="no-results">
+        <div class="no-results-icon">\uD83D\uDCDA</div>
+        <p>No books found matching your search.</p>
+      </div>
+    `;
     return;
   }
 
-  grid.innerHTML = books.map(book => `
-    <div class="book-card" onclick="viewBook(${book.id})">
+  grid.innerHTML = books.map((book, i) => `
+    <div class="book-card animate-on-scroll stagger-${Math.min(i % 6 + 1, 6)}" onclick="viewBook(${book.id})">
       ${book.image
-        ? `<img src="${book.image}" alt="${book.title}" onerror="this.outerHTML='<div class=&quot;book-cover-placeholder&quot;>📚</div>'">`
-        : `<div class="book-cover-placeholder">📚</div>`
+        ? `<img src="${book.image}" alt="${book.title}" loading="lazy" onerror="this.outerHTML='<div class=\'book-cover-placeholder\'>\uD83D\uDCDA</div>'">`
+        : `<div class="book-cover-placeholder">\uD83D\uDCDA</div>`
       }
       <div class="book-card-body">
         <div class="book-card-title">${book.title}</div>
@@ -231,6 +306,8 @@ function renderBooks(books) {
       </div>
     </div>
   `).join('');
+
+  setupScrollObserver();
 }
 
 // ==================== SEARCH ====================
@@ -280,35 +357,32 @@ async function viewBook(bookId) {
     if (!response.ok) throw new Error();
     book = await response.json();
   } catch {
-    // Fallback to local mock data
     book = allBooks.find(b => b.id === bookId);
   }
 
   if (!book) { showToast('Book not found.'); return; }
   currentBook = book;
 
-  // Render book detail
   document.getElementById('bookDetailContent').innerHTML = `
     <div style="text-align:center">
       ${book.image
-        ? `<img src="${book.image}" alt="${book.title}" style="max-width:240px; border-radius:8px;" onerror="this.outerHTML='<div class=&quot;book-cover-placeholder&quot; style=&quot;height:300px;&quot;>📚</div>'">`
-        : `<div class="book-cover-placeholder" style="height:300px">📚</div>`
+        ? `<img src="${book.image}" alt="${book.title}" style="max-width:260px; border-radius:12px;" onerror="this.outerHTML='<div class=\'book-cover-placeholder\' style=\'height:320px\'>\uD83D\uDCDA</div>'">`
+        : `<div class="book-cover-placeholder" style="height:320px">\uD83D\uDCDA</div>`
       }
     </div>
     <div class="book-detail-info">
       <span class="category-tag">${book.category || 'Book'}</span>
       <h1>${book.title}</h1>
       <p class="author">by <strong>${book.author}</strong></p>
-      <div class="stars" style="font-size:1rem">${renderStars(book.rating || 0)} &nbsp; <span style="color:var(--text-light); font-size:0.85rem">(${book.rating || 0})</span></div>
+      <div class="stars" style="font-size:1.05rem">${renderStars(book.rating || 0)} &nbsp; <span style="color:var(--text-secondary); font-size:0.88rem">(${book.rating || 0})</span></div>
       <p class="description">${book.description || 'No description available.'}</p>
       <p class="detail-price">$${parseFloat(book.price).toFixed(2)}</p>
-      <button class="btn-primary" onclick="addToCart(${book.id})">Add to Cart</button>
+      <button class="btn-primary ripple-btn" onclick="addToCart(${book.id})">Add to Cart</button>
     </div>
   `;
 
-  // Render existing reviews
   renderReviews(book.reviews || []);
-
+  initRippleButtons();
   showPage('details');
 }
 
@@ -381,7 +455,11 @@ async function removeFromCart(bookId) {
  */
 function updateCartBadge() {
   const total = cartItems.reduce((sum, c) => sum + (c.quantity || 1), 0);
-  document.getElementById('cartBadge').textContent = total;
+  const badge = document.getElementById('cartBadge');
+  badge.textContent = total;
+  badge.classList.remove('bump');
+  void badge.offsetWidth;
+  if (total > 0) badge.classList.add('bump');
 }
 
 /**
@@ -394,13 +472,14 @@ function renderCart() {
     if (cartItems.length === 0) {
       cartContent.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">🛒</div>
+          <div class="empty-icon">\uD83D\uDED2</div>
           <h3>Your cart is empty</h3>
           <p>Add some books to get started!</p>
           <br/>
-          <button class="btn-primary" onclick="showPage('home')">Browse Books</button>
+          <button class="btn-primary ripple-btn" onclick="showPage('home')">Browse Books</button>
         </div>
       `;
+      initRippleButtons();
       return;
     }
 
@@ -409,7 +488,7 @@ function renderCart() {
     const grandTotal = total + shipping;
 
     cartContent.innerHTML = `
-      <table class="cart-table">
+      <table class="cart-table animate-on-scroll">
         <thead>
           <tr>
             <th>Book</th>
@@ -421,8 +500,8 @@ function renderCart() {
           </tr>
         </thead>
         <tbody>
-          ${cartItems.map(item => `
-            <tr>
+          ${cartItems.map((item, i) => `
+            <tr class="animate-on-scroll stagger-${Math.min(i % 6 + 1, 6)}">
               <td><strong>${item.title}</strong></td>
               <td>${item.author}</td>
               <td>$${parseFloat(item.price).toFixed(2)}</td>
@@ -442,9 +521,12 @@ function renderCart() {
         <div class="summary-row"><span>Shipping</span><span>$${shipping.toFixed(2)}</span></div>
         <div class="summary-row summary-total"><span>Total</span><span>$${grandTotal.toFixed(2)}</span></div>
         <br/>
-        <button class="btn-primary btn-full" onclick="checkout()">Proceed to Checkout</button>
+        <button class="btn-primary btn-full ripple-btn" onclick="checkout()">Proceed to Checkout</button>
       </div>
     `;
+
+    setupScrollObserver();
+    initRippleButtons();
   });
 }
 
@@ -481,7 +563,7 @@ async function checkout() {
 
 /** Generate a random order ID for demo. */
 function generateOrderId() {
-  return 'PT-' + Date.now().toString(36).toUpperCase();
+  return 'CV-' + Date.now().toString(36).toUpperCase();
 }
 
 // ==================== REVIEWS ====================
@@ -499,7 +581,7 @@ function setRating(val) {
 function renderReviews(reviews) {
   const list = document.getElementById('reviewsList');
   if (!reviews || reviews.length === 0) {
-    list.innerHTML = '<p style="color:var(--text-light); font-size:0.9rem">No reviews yet. Be the first!</p>';
+    list.innerHTML = '<p style="color:var(--text-secondary); font-size:0.92rem">No reviews yet. Be the first!</p>';
     return;
   }
   list.innerHTML = reviews.map(r => `
@@ -540,11 +622,13 @@ function switchAuthTab(tab) {
     signupForm.style.display = 'none';
     loginTab.classList.add('active');
     signupTab.classList.remove('active');
+    loginForm.classList.add('animate-on-scroll', 'visible');
   } else {
     loginForm.style.display  = 'none';
     signupForm.style.display = 'block';
     signupTab.classList.add('active');
     loginTab.classList.remove('active');
+    signupForm.classList.add('animate-on-scroll', 'visible');
   }
 }
 
@@ -625,5 +709,8 @@ function handleSignup(e) {
 
 // ==================== INIT ====================
 
-// Load books when the page first loads
-loadBooks();
+document.addEventListener('DOMContentLoaded', () => {
+  loadBooks();
+  initNavbarScroll();
+  initRippleButtons();
+});
